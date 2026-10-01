@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIFAR-10 AI Image Classifier | Production Deep Learning</title>
+    <meta name="description" content="Production-grade AI image classification web application trained on the CIFAR-10 dataset using deep neural networks.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Background subtle ambient glow effects -->
+    <div class="ambient-glow glow-top" aria-hidden="true"></div>
+    <div class="ambient-glow glow-bottom" aria-hidden="true"></div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+    <div class="app-layout">
+        <!-- Header -->
+        <header class="header">
+            <div class="container header-container">
+                <a href="/" class="brand" aria-label="CIFAR-10 AI Classifier Home">
+                    <span class="brand-icon">⚡</span>
+                    <span class="brand-text">CIFAR<span class="brand-highlight">.AI</span></span>
+                </a>
+                <div class="badge-status">
+                    <span class="status-indicator" aria-hidden="true"></span>
+                    <span>Trained Keras Model</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Hero Section -->
+                <section class="hero-section text-center">
+                    <div class="badge-hero">
+                        <span class="badge-sparkle">✦</span>
+                        <span>AI IMAGE CLASSIFIER</span>
+                    </div>
+                    <h1 class="hero-title">
+                        See What Your Image Is.
+                    </h1>
+                    <p class="hero-subtitle">
+                        Upload an image and let our CIFAR-10 AI classifier identify what it sees.
+                    </p>
+
+                    <!-- Supported Classes Tag Pills -->
+                    <div class="classes-preview" aria-label="Supported CIFAR-10 Categories">
+                        <div class="classes-track">
+                            {% for name in class_names %}
+                            <span class="class-tag">
+                                <span class="tag-emoji">{{ class_emojis[name] }}</span>
+                                <span class="tag-name">{{ name }}</span>
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Core Classification Workspace -->
+                <section class="workspace-section" aria-label="Image Classification Workspace">
+                    <div class="workspace-card">
+                        
+                        <!-- Upload State View -->
+                        <div id="upload-panel" class="workspace-panel">
+                            <!-- Drag & Drop Zone -->
+                            <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Image upload area. Drag and drop an image here or press Enter to browse files.">
+                                <input type="file" id="file-input" class="file-input" accept=".png,.jpg,.jpeg,.webp" aria-hidden="true">
+                                
+                                <div class="drop-zone-content">
+                                    <div class="upload-icon-wrapper">
+                                        <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="upload-text-group">
+                                        <h3 class="upload-title">Drop your image here</h3>
+                                        <p class="upload-subtitle">or <span class="browse-link">click to browse</span></p>
+                                    </div>
+                                    <div class="upload-meta">
+                                        <span class="meta-pill">PNG</span>
+                                        <span class="meta-pill">JPG</span>
+                                        <span class="meta-pill">JPEG</span>
+                                        <span class="meta-pill">WEBP</span>
+                                        <span class="meta-separator">•</span>
+                                        <span class="meta-size">Maximum file size: 5 MB</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Image Selected / Preview State View (Initially Hidden) -->
+                        <div id="preview-panel" class="workspace-panel hidden">
+                            <div class="staged-preview-container">
+                                <div class="staged-image-box">
+                                    <img id="staged-image" src="" alt="Selected image preview" class="staged-img">
+                                </div>
+                                <div class="staged-info-box">
+                                    <div class="staged-details">
+                                        <div class="file-title-row">
+                                            <span class="file-icon">🖼️</span>
+                                            <span id="staged-filename" class="file-name" title="">filename.png</span>
+                                        </div>
+                                        <div class="file-meta-row">
+                                            <span id="staged-dimensions" class="meta-tag">-- × -- px</span>
+                                            <span id="staged-filesize" class="meta-tag">-- KB</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="action-buttons-group">
+                                        <button type="button" id="remove-btn" class="btn btn-secondary" aria-label="Remove selected image">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            </svg>
+                                            <span>Remove</span>
+                                        </button>
+                                        <button type="button" id="analyze-btn" class="btn btn-primary" aria-label="Analyze image using neural network">
+                                            <span class="btn-spinner hidden" id="btn-spinner" aria-hidden="true"></span>
+                                            <span id="btn-text">Analyze Image</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Results View (Initially Hidden) -->
+                        <div id="results-panel" class="workspace-panel hidden">
+                            <div class="results-grid">
+                                <!-- Left Column: Uploaded Image Preview -->
+                                <div class="results-image-card">
+                                    <div class="card-header-bar">
+                                        <span class="panel-label">Uploaded Image</span>
+                                        <span id="result-resolution-badge" class="badge-tech">32×32 Target</span>
+                                    </div>
+                                    <div class="result-image-wrapper">
+                                        <img id="result-image" src="" alt="Analyzed image" class="result-display-img">
+                                    </div>
+                                    <div class="result-image-footer">
+                                        <span id="result-filename-display" class="result-filename">image.png</span>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column: AI Prediction & Confidence -->
+                                <div class="results-data-card">
+                                    <div class="card-header-bar">
+                                        <span class="panel-label">AI Inference Output</span>
+                                        <span class="badge-model">RMSprop • 10 Classes</span>
+                                    </div>
+
+                                    <!-- Main Predicted Class Hero Banner -->
+                                    <div class="prediction-hero-banner">
+                                        <div class="prediction-emoji-display" id="main-prediction-emoji">🔍</div>
+                                        <div class="prediction-text-group">
+                                            <span class="prediction-caption">Predicted Class</span>
+                                            <h2 class="prediction-class-name" id="main-predicted-class">AIRPLANE</h2>
+                                        </div>
+                                        <div class="prediction-confidence-group">
+                                            <span class="confidence-caption">Confidence</span>
+                                            <span class="confidence-number" id="main-confidence-val">87.4%</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Hero Confidence Bar -->
+                                    <div class="hero-progress-wrapper" aria-label="Prediction confidence bar">
+                                        <div class="progress-track">
+                                            <div id="main-progress-bar" class="progress-fill" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Top 3 Predictions Breakdown -->
+                                    <div class="top-predictions-section">
+                                        <h3 class="breakdown-title">Top Predictions</h3>
+                                        <div id="top-predictions-list" class="top-predictions-list">
+                                            <!-- Dynamically injected via JavaScript -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Action Bar: Analyze Another -->
+                                    <div class="results-action-bar">
+                                        <button type="button" id="reset-btn" class="btn btn-secondary btn-full">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                                                <polyline points="3 3 3 8 8 8"></polyline>
+                                            </svg>
+                                            <span>Classify Another Image</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container footer-container">
+                <p class="footer-credit">
+                    Powered by <span class="footer-tech">TensorFlow</span> • <span class="footer-tech">Flask</span> • <span class="footer-tech">CIFAR-10</span>
+                </p>
+                <div class="footer-status">
+                    <span class="status-dot"></span>
+                    <span>Model Ready: 32×32 RGB Neural Classifier</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Application Script -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
